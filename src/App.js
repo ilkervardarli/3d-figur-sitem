@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 
+// Vercel build'ini yeniden tetikle
 // Sabit olarak tanımlanmış prompt'lar
 const PROMPTS = [
     {
