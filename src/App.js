@@ -1,44 +1,20 @@
 import React, { useState, useCallback, useMemo } from 'react';
 
 /**
- * 3D FIGUR AI - Profesyonel Yapılandırma
- * Model: gemini-2.0-flash-exp (Görsel Üretim Destekli Deneysel Sürüm)
+ * 3D FIGUR AI - Nano Banana (Imagen 4.0) Sürümü
+ * Bu sürüm, Gemini 2.5 Flash ile analiz yapıp Imagen 4.0 ile görsel üretir.
  */
 
 const PROMPTS = [
-  {
-    id: 1,
-    title: 'Chibi Stili',
-    prompt: "Create a high-quality 3D render of a cute 'chibi' style character based on the person in the photo. Large oversized head, small body, glossy eyes. Solid white studio background."
-  },
-  {
-    id: 2,
-    title: 'Funko Stili',
-    prompt: "A Funko Pop style vinyl figurine of the person in the photo. Oversized head, large black circular eyes, small nose. Solid white studio background."
-  },
-  {
-    id: 3,
-    title: 'Pixar Stili',
-    prompt: "A full-body 3D character rendering of the person in the photo in Pixar animation style. Expressive features, soft lighting. Solid white studio background."
-  },
-  {
-    id: 4,
-    title: 'Action Figür',
-    prompt: "An action figure of the person in the photo, styled like a Hasbro/Mattel toy. Articulated joints, plastic texture. Solid white studio background."
-  },
-  {
-    id: 5,
-    title: 'Roma Büstü',
-    prompt: "A photorealistic Roman-style marble bust of the person in the photo. Aged Carrara marble texture. Solid white studio background."
-  },
-  {
-    id: 6,
-    title: 'Modern Oyuncak',
-    prompt: "A 3D render of a stylized, cartoonish action figure resembling the person in the photo. Smooth plastic finish. Solid white studio background."
-  }
+  { id: 1, title: 'Chibi Stili', style: 'cute Chibi / Funko style with a large head and small body' },
+  { id: 2, title: 'Funko Stili', style: 'classic Funko Pop vinyl figure with button eyes and oversized head' },
+  { id: 3, title: 'Pixar Stili', style: 'Pixar movie animation character style with expressive eyes and soft lighting' },
+  { id: 4, title: 'Action Figür', style: 'Hasbro/Mattel action figure style with articulated joints and plastic texture' },
+  { id: 5, title: 'Roma Büstü', style: 'classical Roman marble bust sculpture with Carrara marble texture' },
+  { id: 6, title: 'Modern Oyuncak', style: 'modern designer toy figure with smooth features and minimalist design' }
 ];
 
-// UI Bileşenleri (İkonlar)
+// İkon Bileşenleri
 const UploadIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -71,10 +47,29 @@ export default function App() {
     }
   }, []);
 
-  const selectedPrompt = useMemo(() => PROMPTS.find(p => p.id === selectedPromptId), [selectedPromptId]);
+  const selectedStyle = useMemo(() => PROMPTS.find(p => p.id === selectedPromptId), [selectedPromptId]);
+
+  // Üst üste binmeyi önlemek ve güvenilirliği artırmak için bekleme fonksiyonu
+  const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const apiCallWithRetry = async (url, options, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (response.ok) return await response.json();
+        if (response.status !== 429 && response.status < 500) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `API Hatası: ${response.status}`);
+        }
+      } catch (err) {
+        if (i === retries - 1) throw err;
+      }
+      await wait(Math.pow(2, i) * 1000);
+    }
+  };
 
   const handleGenerateImage = async () => {
-    if (!selectedImage || !selectedPrompt) {
+    if (!selectedImage || !selectedStyle) {
       setError("Lütfen bir fotoğraf yükleyin ve stil seçin.");
       return;
     }
@@ -83,63 +78,56 @@ export default function App() {
     setError(null);
 
     try {
+        const apiKey = ""; // API anahtarı çalışma ortamı tarafından sağlanır
         const base64ImageData = selectedImage.split(',')[1];
-        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
 
-        if (!apiKey) {
-            throw new Error("API Anahtarı bulunamadı! Vercel'de REACT_APP_GEMINI_API_KEY değişkenini kontrol edin.");
-        }
-
-        /**
-         * ÖNEMLİ: Kararlı (stable) modeller henüz IMAGE çıktısını desteklemiyor.
-         * Bu yüzden deneysel (experimental) olan gemini-2.0-flash-exp modelini kullanıyoruz.
-         */
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
-
-        const payload = {
+        // 1. ADIM: GEMINI 2.5 FLASH İLE FOTOĞRAF ANALİZİ
+        // Bu adımda fotoğrafın detaylarını çıkarıp Imagen'e ne yapması gerektiğini söylüyoruz.
+        const analyzerUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        const analyzerPayload = {
             contents: [{
                 parts: [
-                    { text: selectedPrompt.prompt },
-                    { inlineData: { mimeType: "image/jpeg", data: base64ImageData } }
+                    { text: `Analyze the person in this photo. Describe their hair color/style, skin tone, clothing, and unique facial features. Based on this, write a professional prompt for an image generator to create a 3D figure in ${selectedStyle.style}. The character must look like this person. Specify high quality 3D render, studio lighting, and a solid white background. Return ONLY the final prompt text.` },
+                    { inlineData: { mimeType: "image/png", data: base64ImageData } }
                 ]
-            }],
-            generationConfig: {
-                // Sadece IMAGE istiyoruz, modalite ismi büyük harf olmalı.
-                responseModalities: ["IMAGE"]
-            }
+            }]
         };
 
-        const response = await fetch(apiUrl, {
+        const analyzerResult = await apiCallWithRetry(analyzerUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(analyzerPayload)
         });
 
-        const result = await response.json();
+        const optimizedPrompt = analyzerResult.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!optimizedPrompt) throw new Error("Görsel analizi yapılamadı.");
 
-        if (!response.ok) {
-            // Kota dolması veya modelin o an meşgul olması durumunda detaylı bilgi ver
-            const msg = result.error?.message || `Sunucu hatası: ${response.status}`;
-            throw new Error(msg);
-        }
+        // 2. ADIM: IMAGEN 4.0 (NANO BANANA) İLE GÖRSEL ÜRETİMİ
+        const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+        
+        const imagenPayload = {
+            instances: { prompt: optimizedPrompt },
+            parameters: { sampleCount: 1 }
+        };
 
-        const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+        const imagenResult = await apiCallWithRetry(imagenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(imagenPayload)
+        });
+
+        const base64Data = imagenResult.predictions?.[0]?.bytesBase64Encoded;
 
         if (base64Data) {
             setGeneratedImage(`data:image/png;base64,${base64Data}`);
         } else {
-            // Eğer model görsel yerine metin dönerse bunu yakala
-            const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (textResponse) {
-                console.warn("Model metin yanıtı döndü:", textResponse);
-                throw new Error("Model görsel yerine metin yanıtı verdi. Lütfen tekrar deneyin veya farklı bir fotoğraf yükleyin.");
-            }
-            throw new Error("Görsel oluşturulamadı. Model yanıt vermedi.");
+            throw new Error("Imagen görsel üretemedi.");
         }
 
     } catch (err) {
-        console.error("Uygulama Hatası:", err);
-        setError(err.message);
+        console.error("Süreç Hatası:", err);
+        setError(`İşlem sırasında bir hata oluştu: ${err.message}`);
     } finally {
         setIsLoading(false);
     }
@@ -167,14 +155,14 @@ export default function App() {
                 3D FİGÜR <span className="text-[#f7ba0c]">AI</span>
             </h1>
             <p className="text-gray-300 mt-4 text-lg max-w-xl mx-auto font-medium italic">
-                Anılarınızı saniyeler içinde fiziksel dünyaya taşıyın.
+                Nanobanana (Imagen 4.0) Teknolojisiyle Kusursuz Tasarımlar.
             </p>
         </header>
 
         <main className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           <div className="bg-white/5 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 shadow-2xl space-y-8">
             <div className="space-y-4">
-              <h2 className="text-2xl font-black flex items-center gap-3 italic uppercase">
+              <h2 className="text-2xl font-black flex items-center gap-3 italic uppercase text-[#f7ba0c]">
                 <span className="bg-[#f7ba0c] text-black w-8 h-8 rounded-full flex items-center justify-center text-sm not-italic">1</span>
                 Fotoğraf Yükle
               </h2>
@@ -184,7 +172,7 @@ export default function App() {
                 ) : (
                   <div className="text-center">
                     <UploadIcon />
-                    <p className="text-gray-400 mt-3 text-sm font-medium">Net bir portre fotoğrafı seçin</p>
+                    <p className="text-gray-400 mt-3 text-sm font-medium">Yüzünüzün net olduğu bir fotoğraf seçin</p>
                   </div>
                 )}
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -192,7 +180,7 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-2xl font-black flex items-center gap-3 italic uppercase">
+              <h2 className="text-2xl font-black flex items-center gap-3 italic uppercase text-[#f7ba0c]">
                 <span className="bg-[#f7ba0c] text-black w-8 h-8 rounded-full flex items-center justify-center text-sm not-italic">2</span>
                 Stil Belirle
               </h2>
@@ -224,9 +212,10 @@ export default function App() {
 
           <div className="bg-black/40 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center min-h-[500px]">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center p-12">
+              <div className="flex flex-col items-center justify-center p-12 text-center">
                   <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#f7ba0c]"></div>
-                  <p className="text-[#f7ba0c] mt-6 font-bold text-lg animate-pulse">Figürünüz Tasarlanıyor...</p>
+                  <p className="text-[#f7ba0c] mt-6 font-bold text-lg animate-pulse uppercase italic tracking-tighter">Imagen 4.0 Hazırlanıyor...</p>
+                  <p className="text-gray-500 text-xs mt-2 italic">Yapay zeka fotoğrafınızı analiz ediyor ve 3D modelinizi çiziyor.</p>
               </div>
             ) : error ? (
               <div className="text-center p-8 bg-red-500/10 rounded-3xl border border-red-500/20 max-w-sm">
@@ -236,7 +225,12 @@ export default function App() {
               </div>
             ) : generatedImage ? (
               <div className="w-full space-y-6 animate-in fade-in zoom-in duration-700">
-                <img src={generatedImage} alt="Sonuç" className="w-full rounded-3xl shadow-2xl border-4 border-white/5" />
+                <div className="relative group">
+                    <img src={generatedImage} alt="Sonuç" className="w-full rounded-3xl shadow-2xl border-4 border-white/5" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-end justify-center pb-6">
+                        <p className="text-[#f7ba0c] font-black italic tracking-widest">TASARIM TAMAMLANDI</p>
+                    </div>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button onClick={downloadImage} className="flex-1 bg-white/10 hover:bg-white/20 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-white/10 transition-colors">
                     <DownloadIcon /> İNDİR
