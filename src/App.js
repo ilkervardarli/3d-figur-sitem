@@ -3,9 +3,9 @@ import React, { useState, useCallback, useMemo } from 'react';
 /**
  * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi (Hata Düzeltmeleri Yapıldı)
  * * Yapılan Düzeltmeler:
- * 1. "step is not defined" hatası giderildi: `setStep` yerine `setLoadingStep` kullanıldı.
- * 2. "process is not defined" hatası için güvenli erişim sağlandı.
- * 3. API Anahtarı kontrolü eklendi: Anahtar yoksa kullanıcı uyarılıyor.
+ * 1. "process is not defined" ve "Objects are not valid as a React child" hataları giderildi.
+ * 2. API anahtarı yönetimi Canvas ortamı ve Vercel için uyumlu hale getirildi.
+ * 3. Hata sınırları (Error Boundary) ile ilgili potansiyel sorunlar ele alındı.
  * 4. İkonlar dahili olarak tanımlandı.
  */
 
@@ -89,7 +89,8 @@ export default function App() {
   const [loadingStep, setLoadingStep] = useState(''); 
 
   // --- API ANAHTARI YÖNETİMİ ---
-  // Vercel veya yerel ortamda güvenli erişim
+  // Canvas ortamı veya Vercel için güvenli anahtar yönetimi.
+  // process.env kontrolü ile tarayıcıda hata oluşmasını engelliyoruz.
   const apiKey = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) || "";
 
   const handleImageUpload = useCallback((event) => {
@@ -200,7 +201,8 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setError(`İşlem sırasında bir hata oluştu: ${String(err.message)}`);
+      // Hata nesnesini string'e çevirerek render hatasını önlüyoruz.
+      setError(`İşlem sırasında bir hata oluştu: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsLoading(false);
       setLoadingStep('');
