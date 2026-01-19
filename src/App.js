@@ -223,7 +223,7 @@ export default function App() {
             3D FİGÜR <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#f7ba0c] to-[#ff9d00] drop-shadow-[0_10px_30px_rgba(247,186,12,0.3)]">AI</span>
           </h1>
           <p className="mt-8 text-gray-400 text-lg sm:text-2xl font-medium italic max-w-3xl mx-auto leading-relaxed">
-            Yapay zeka ile fotoğraflarınızı ölümsüzleştirin. Saniyeler içinde kendi koleksiyon figürünüzü tasarlayın.
+            Yapay zeka ile fotoğraflarınızı karikatürize edin. Saniyeler içinde kendi koleksiyon figürünüzü tasarlayın.
           </p>
         </header>
 
