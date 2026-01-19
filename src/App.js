@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 
 /**
  * 3D FIGUR AI - Profesyonel Yapılandırma
- * Model: gemini-2.0-flash (Güncel ve Kararlı Sürüm)
+ * Model: gemini-2.0-flash-exp (Görsel Üretim Destekli Deneysel Sürüm)
  */
 
 const PROMPTS = [
@@ -90,8 +90,11 @@ export default function App() {
             throw new Error("API Anahtarı bulunamadı! Vercel'de REACT_APP_GEMINI_API_KEY değişkenini kontrol edin.");
         }
 
-        // --- MODEL ADINI GÜNCELLEDİK ---
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        /**
+         * ÖNEMLİ: Kararlı (stable) modeller henüz IMAGE çıktısını desteklemiyor.
+         * Bu yüzden deneysel (experimental) olan gemini-2.0-flash-exp modelini kullanıyoruz.
+         */
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{
@@ -101,7 +104,7 @@ export default function App() {
                 ]
             }],
             generationConfig: {
-                // Görsel çıktısı almak için multimodal modları kullanıyoruz
+                // Sadece IMAGE istiyoruz, modalite ismi büyük harf olmalı.
                 responseModalities: ["IMAGE"]
             }
         };
@@ -115,6 +118,7 @@ export default function App() {
         const result = await response.json();
 
         if (!response.ok) {
+            // Kota dolması veya modelin o an meşgul olması durumunda detaylı bilgi ver
             const msg = result.error?.message || `Sunucu hatası: ${response.status}`;
             throw new Error(msg);
         }
@@ -124,7 +128,13 @@ export default function App() {
         if (base64Data) {
             setGeneratedImage(`data:image/png;base64,${base64Data}`);
         } else {
-            throw new Error("Görsel oluşturulamadı. Model görsel yanıtı dönmedi.");
+            // Eğer model görsel yerine metin dönerse bunu yakala
+            const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textResponse) {
+                console.warn("Model metin yanıtı döndü:", textResponse);
+                throw new Error("Model görsel yerine metin yanıtı verdi. Lütfen tekrar deneyin veya farklı bir fotoğraf yükleyin.");
+            }
+            throw new Error("Görsel oluşturulamadı. Model yanıt vermedi.");
         }
 
     } catch (err) {
@@ -228,14 +238,14 @@ export default function App() {
               <div className="w-full space-y-6 animate-in fade-in zoom-in duration-700">
                 <img src={generatedImage} alt="Sonuç" className="w-full rounded-3xl shadow-2xl border-4 border-white/5" />
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button onClick={downloadImage} className="flex-1 bg-white/10 hover:bg-white/20 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-white/10">
+                  <button onClick={downloadImage} className="flex-1 bg-white/10 hover:bg-white/20 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-white/10 transition-colors">
                     <DownloadIcon /> İNDİR
                   </button>
                   <a 
                     href="https://3dfigur.com/kisiye-ozel-figurler" 
                     target="_blank" 
                     rel="noreferrer" 
-                    className="flex-[2] bg-[#f7ba0c] text-black hover:bg-[#ffc117] py-4 rounded-xl font-black italic text-center shadow-lg"
+                    className="flex-[2] bg-[#f7ba0c] text-black hover:bg-[#ffc117] py-4 rounded-xl font-black italic text-center shadow-lg transition-transform hover:scale-105"
                   >
                     SİPARİŞ VER (3 GÜN)
                   </a>
