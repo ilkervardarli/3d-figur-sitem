@@ -3,9 +3,8 @@ import React, { useState, useCallback, useMemo } from 'react';
 /**
  * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi (Hata Düzeltmeleri Yapıldı)
  * * Yapılan Düzeltmeler:
- * 1. "process is not defined" hatası giderildi: API anahtarı yönetimi hem tarayıcı hem sunucu ortamına uygun hale getirildi.
- * 2. "lucide-react" bağımlılığı kaldırıldı: İkonlar doğrudan kodun içine gömüldü, böylece ekstra paket yüklemeye gerek kalmadan çalışır.
- * 3. Hata yakalama mekanizması güçlendirildi.
+ * 1. "process is not defined" hatası giderildi: API anahtarı yönetimi Canvas ortamına uygun hale getirildi.
+ * 2. İkonlar dahili olarak tanımlandı, harici paket bağımlılığı kaldırıldı.
  */
 
 // --- İKON BİLEŞENLERİ (Bağımsız çalışması için dahili olarak tanımlandı) ---
@@ -88,9 +87,9 @@ export default function App() {
   const [loadingStep, setLoadingStep] = useState(''); 
 
   // --- API ANAHTARI YÖNETİMİ ---
-  // process.env kontrolü ile tarayıcı çökmesini engelliyoruz.
-  // Eğer process tanımlıysa (Vercel gibi), env değişkenini alır. Değilse (önizleme) boş dize döner.
-  const apiKey = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) || "";
+  // Canvas/Önizleme ortamında sistem anahtarı otomatik enjekte eder.
+  // Bu yüzden apiKey değişkenini boş bir string olarak başlatıyoruz.
+  const apiKey = "";
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files[0];
@@ -133,10 +132,6 @@ export default function App() {
       setError("Lütfen bir fotoğraf yükleyin ve tasarım stilinizi seçin.");
       return;
     }
-
-    // Önizleme ortamında apiKey boş olsa bile sistemin enjekte etmesine izin veriyoruz.
-    // Ancak production (Vercel) ortamında apiKey yoksa hata verir.
-    // Burada kontrolü esnek tutuyoruz.
 
     setIsLoading(true);
     setError(null);
@@ -197,7 +192,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setError(`İşlem sırasında bir hata oluştu: ${err.message}`);
+      setError(`İşlem sırasında bir hata oluştu: ${String(err.message)}`);
     } finally {
       setIsLoading(false);
       setLoadingStep('');
@@ -425,7 +420,7 @@ export default function App() {
                 <div className="pt-10 border-t border-white/10">
                     <ul className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-[#f7ba0c] font-black italic uppercase text-xs tracking-widest">
                         <li>✓ 3-5 GÜNDE KARGO</li>
-                        <li>✓ EL İŞÇİLİĞİ</li>
+                        <li>✓ YENİLİKÇİ TEKNOLOJİ</li>
                         <li>✓ ÜCRETSİZ TASARIM</li>
                         <li>✓ %100 MEMNUNİYET</li>
                     </ul>
