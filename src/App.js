@@ -214,7 +214,7 @@ export default function App() {
     <div className="min-h-screen bg-[#31006e] text-white font-sans selection:bg-[#f7ba0c] selection:text-black">
       {/* Kargo Şeridi */}
       <div className="bg-gradient-to-r from-[#f7ba0c] to-[#ff9d00] text-black py-3 px-4 text-center font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs shadow-xl relative z-50">
-        🚀 KAMPANYA: SİPARİŞLERİNİZ 3-5 İŞ GÜNÜ İÇİNDE ÜRETİLİP KARGOYA VERİLİR!
+        🚀 TESLİM SÜRESİ: SİPARİŞLERİNİZ 3-5 İŞ GÜNÜ İÇİNDE ÜRETİLİP KARGOYA VERİLİR!
       </div>
 
       <div className="container mx-auto max-w-6xl px-4 py-12 lg:py-20">
