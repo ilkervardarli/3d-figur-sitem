@@ -1,278 +1,283 @@
 import React, { useState, useCallback, useMemo } from 'react';
 
-// Sabit olarak tanımlanmış prompt'lar
+// Uygulama içinde kullanılacak özel stil tanımları (Promptlar)
 const PROMPTS = [
-  {
-    id: 1,
-    title: 'Chibi Stili',
-    prompt: "Create a 3D rendered full-body character of the person in the photo in a Chibi/Funko style. The character should have a large head, small body, and cute, endearing features with big expressive eyes. The final image should have a clean, solid white studio background. The character should be the main focus."
-  },
-  {
-    id: 2,
-    title: 'Funko Stili',
-    prompt: "Create a 3D rendered full-body character of the person in the photo in the style of a Funko Pop vinyl figure. The character should have the classic Funko proportions: oversized head, small body, and black button-like eyes. The final image should have a clean, solid white studio background, focusing entirely on the figure."
-  },
-  {
-    id: 3,
-    title: 'Pixar Stili',
-    prompt: "Create a 3D rendered, full-body character of the person in the photo in the iconic style of a Pixar animated movie character. The character should have expressive features, detailed textures (hair, clothing), and dynamic lighting. The final image must have a plain, solid white studio background."
-  },
-  {
-    id: 4,
-    title: 'Hasbro/Mattel Figürü',
-    prompt: "Create a 3D render of a commercialized action figure of the person in the photo, in the style of a modern Hasbro or Mattel toy. The figure should have articulated joints and a clean, polished plastic texture. The final image should be a product shot on a clean, solid white studio background."
-  },
-  {
-    id: 5,
-    title: 'Roma Büstü',
-    prompt: "Create a masterpiece marble bust of the person in the photo, in the style of a classical Roman sculptor. The sculpture must be crafted from a single block of Carrara marble, showing subtle veining and natural stone imperfections. The result must look like solid, intricately carved stone. Strictly preserve the person’s face and identity. The bust is placed on a simple pedestal against a plain, solid white studio background."
-  },
-  {
-      id: 6,
-      title: 'Modern Oyuncak Figür',
-      prompt: "A 3D render of a stylized, cartoonish action figure resembling the person in the uploaded photo. The figure should have simplified, smooth features characteristic of a modern Mattel or Hasbro toy line (e.g., Fisher-Price Imaginext, Funko Pop! in 3D, or a friendly corporate mascot style). It should clearly retain the recognizable facial features and outfit of the individual, but translated into a smooth, clean, plastic-like texture with simplified anatomy and proportions. The pose should match the photo. The figure stands on a simple, round toy display base. The background is a plain, solid studio color."
-  }
+    {
+        id: 1,
+        title: 'Chibi Stili',
+        prompt: "Create a high-quality 3D render of a cute 'chibi' style character based on the person in the uploaded photo. The character should have classic chibi proportions: a very large, oversized head and a small, short body. The face should be the main focus, with large, glossy, and highly expressive 'anime-style' eyes, a tiny nose, and a simple mouth. The hair and clothing should be stylized and simplified but still recognizable from the photo, with a smooth, clean, plastic toy-like texture. Solid white studio background."
+    },
+    {
+        id: 2,
+        title: 'Funko Stili',
+        prompt: "A Funko Pop style vinyl figurine of the person in the photo. It has the classic Funko Pop characteristics: an oversized head, large black circular eyes, a small nose, and no mouth. The figure is placed against a simple, clean, solid white studio background with soft lighting."
+    },
+    {
+        id: 3,
+        title: 'Pixar Stili',
+        prompt: "A full-body 3D character rendering of the person in the photo, in the style of a Pixar movie. The character has expressive eyes, soft features, and detailed hair, capturing their likeness in a charming, animated way. Solid white studio background."
+    },
+    {
+        id: 4,
+        title: 'Action Figür',
+        prompt: "An action figure of the person in the photo, styled like a classic Hasbro or Mattel toy. The figure features visible articulated joints and a polished plastic texture. It stands against a simple, clean, solid white studio background."
+    },
+    {
+        id: 5,
+        title: 'Roma Büstü',
+        prompt: "A photorealistic Roman-style marble bust of the person in the photo. The sculpture appears carved from a single piece of aged Carrara marble. It is displayed against a plain, solid white studio background."
+    },
+    {
+        id: 6,
+        title: 'Modern Oyuncak',
+        prompt: "A 3D render of a stylized, cartoonish action figure resembling the person in the photo. Smooth, plastic-like texture with simplified proportions. Solid white studio background."
+    }
 ];
 
-
-// SVG İkonları
+// İkonlar ve Yükleme Göstergesi
 const UploadIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
     </svg>
 );
 
 const DownloadIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 );
 
 const LoadingSpinner = () => (
-    <div className="flex flex-col items-center justify-center gap-4">
-        <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p className="text-lg text-gray-300">Görseliniz oluşturuluyor, lütfen bekleyin...</p>
+    <div className="flex flex-col items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#f7ba0c]"></div>
+        <p className="text-[#f7ba0c] mt-6 font-bold text-lg animate-pulse">Figürünüz Tasarlanıyor...</p>
     </div>
 );
 
-
 export default function App() {
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedPromptId, setSelectedPromptId] = useState(null);
-  const [generatedImage, setGeneratedImage] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedPromptId, setSelectedPromptId] = useState(null);
+    const [generatedImage, setGeneratedImage] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-  const handleImageUpload = useCallback((event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result);
-        setGeneratedImage(null); // Yeni resim yüklendiğinde eski sonucu temizle
+    const handleImageUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setSelectedImage(reader.result);
+                setGeneratedImage(null);
+                setError(null);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const selectedPrompt = useMemo(() => PROMPTS.find(p => p.id === selectedPromptId), [selectedPromptId]);
+
+    const handleGenerateImage = async () => {
+        if (!selectedImage || !selectedPrompt) {
+            setError("Lütfen bir fotoğraf yükleyin ve stil seçin.");
+            return;
+        }
+
+        setIsLoading(true);
         setError(null);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
 
-  const selectedPrompt = useMemo(() => {
-    return PROMPTS.find(p => p.id === selectedPromptId);
-  }, [selectedPromptId]);
+        try {
+            const base64ImageData = selectedImage.split(',')[1];
+            // Vercel'deki Environment Variable'dan anahtarı çekiyoruz
+            const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
 
+            if (!apiKey) {
+                throw new Error("API Anahtarı bulunamadı. Vercel ayarlarınızı kontrol edin.");
+            }
 
-  const handleGenerateImage = useCallback(async () => {
-    if (!selectedImage || !selectedPrompt) {
-      setError("Lütfen bir görsel yükleyin ve bir stil seçin.");
-      return;
-    }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
 
-    setIsLoading(true);
-    setError(null);
-    setGeneratedImage(null);
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: selectedPrompt.prompt },
+                        { inlineData: { mimeType: "image/jpeg", data: base64ImageData } }
+                    ]
+                }],
+                generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
+            };
 
-    try {
-        const base64ImageData = selectedImage.split(',')[1];
-        
-        const payload = {
-            contents: [{
-                parts: [
-                    { text: selectedPrompt.prompt },
-                    { inlineData: { mimeType: "image/jpeg", data: base64ImageData } }
-                ]
-            }],
-            generationConfig: {
-                responseModalities: ['IMAGE', 'TEXT']
-            },
-        };
-        
-        // --- DEĞİŞİKLİK BURADA ---
-        // API anahtarını artık ortam değişkeninden alıyoruz.
-        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
-        
-        if (!apiKey) {
-            throw new Error("API anahtarı bulunamadı. Lütfen site yöneticisi ile iletişime geçin.");
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error?.message || "Servis şu an meşgul, lütfen tekrar deneyin.");
+            }
+
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+            if (base64Data) {
+                setGeneratedImage(`data:image/png;base64,${base64Data}`);
+            } else {
+                throw new Error("Görsel oluşturulamadı. Lütfen başka bir stil deneyin.");
+            }
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
+    };
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+    const downloadImage = () => {
+        const link = document.createElement("a");
+        link.href = generatedImage;
+        link.download = "3dfigur-tasarim.png";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || `API isteği başarısız oldu: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-
-        if (base64Data) {
-            setGeneratedImage(`data:image/png;base64,${base64Data}`);
-        } else {
-            const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-            console.error("API returned a text response instead of an image:", textResponse);
-            throw new Error("Görsel oluşturulamadı. Model, resim yerine metin tabanlı bir yanıt verdi. Lütfen farklı bir görsel veya stil ile tekrar deneyin.");
-        }
-
-    } catch (err) {
-        console.error(err);
-        setError(`Bir hata oluştu: ${err.message}`);
-    } finally {
-        setIsLoading(false);
-    }
-  }, [selectedImage, selectedPrompt]);
-  
-  const handleDownload = useCallback(() => {
-    if (!generatedImage) return;
-
-    fetch(generatedImage)
-        .then(res => res.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "3dfigur-ai-sonuc.png";
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        })
-        .catch(err => {
-            console.error("İndirme işlemi sırasında hata:", err);
-            setError("Görsel indirilirken bir hata oluştu. Lütfen tekrar deneyin.");
-        });
-  }, [generatedImage]);
-
-
-  return (
-    <div className="bg-[#31006e] text-white min-h-screen font-sans p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-      <div className="container mx-auto max-w-7xl">
-        <header className="text-center mb-10">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white">
-                3D Figür <span className="text-[#f7ba0c]">AI</span>
-            </h1>
-            <p className="text-gray-300 mt-4 text-lg max-w-2xl mx-auto">Yapay zeka ile fotoğraflarınızı saniyeler içinde göz alıcı 3D figürlere dönüştürün!</p>
-        </header>
-
-        <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Sol Panel: Girişler */}
-          <div className="bg-black bg-opacity-20 p-6 rounded-2xl shadow-2xl flex flex-col gap-6 border border-white/10">
-            <div>
-              <h2 className="text-2xl font-bold mb-3 text-[#f7ba0c]">1. Fotoğrafını Yükle</h2>
-              <label htmlFor="file-upload" className="cursor-pointer group">
-                <div className="mt-2 flex justify-center items-center rounded-lg border-2 border-dashed border-gray-500 hover:border-[#f7ba0c] transition-all px-6 py-10 min-h-[250px]">
-                  {selectedImage ? (
-                    <img src={selectedImage} alt="Yüklenen önizleme" className="max-h-64 rounded-lg object-contain" />
-                  ) : (
-                    <div className="text-center">
-                       <UploadIcon />
-                      <div className="mt-4 flex text-sm leading-6 text-gray-400">
-                        <p className="pl-1">Bir dosya seçin veya sürükleyip bırakın</p>
-                      </div>
-                      <p className="text-xs leading-5 text-gray-500">PNG, JPG, GIF (10MB'a kadar)</p>
-                    </div>
-                  )}
-                </div>
-                <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*" onChange={handleImageUpload} />
-              </label>
+    return (
+        <div className="bg-[#31006e] text-white min-h-screen font-sans">
+            {/* Kampanya/Bilgi Çubuğu */}
+            <div className="bg-[#f7ba0c] text-black text-center py-2 text-xs sm:text-sm font-black uppercase tracking-widest">
+                🚀 SİPARİŞLERİNİZ 3 İŞ GÜNÜ İÇİNDE ÜRETİLİP KARGOYA VERİLİR!
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold mb-4 text-[#f7ba0c]">2. Bir Stil Seç</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={() => setSelectedPromptId(prompt.id)}
-                    className={`p-3 text-center rounded-lg transition-all duration-200 text-sm font-semibold border-2 ${
-                      selectedPromptId === prompt.id
-                        ? 'bg-[#d61545] text-white border-[#d61545] shadow-lg'
-                        : 'bg-white/10 border-transparent hover:border-white/50 hover:bg-white/20'
-                    }`}
-                  >
-                    {prompt.title}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="container mx-auto max-w-6xl px-4 py-10">
+                <header className="text-center mb-12">
+                    <h1 className="text-5xl sm:text-7xl font-black tracking-tighter italic uppercase">
+                        3D FİGÜR <span className="text-[#f7ba0c]">AI</span>
+                    </h1>
+                    <p className="text-gray-300 mt-4 text-lg max-w-xl mx-auto font-medium">
+                        Fotoğrafınızı yükleyin, tarzınızı seçin ve anılarınızı saniyeler içinde sanat eserine dönüştürün.
+                    </p>
+                </header>
 
-            <button
-              onClick={handleGenerateImage}
-              disabled={!selectedImage || !selectedPromptId || isLoading}
-              className="w-full mt-auto py-4 px-4 rounded-lg text-lg font-bold text-white bg-[#d61545] hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
-            >
-              {isLoading ? 'Dönüştürülüyor...' : 'Dönüştür'}
-            </button>
-          </div>
+                <main className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+                    {/* Giriş Paneli */}
+                    <div className="bg-white/5 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 shadow-2xl space-y-8">
+                        <div>
+                            <h2 className="text-2xl font-black mb-4 flex items-center gap-3 italic">
+                                <span className="bg-[#f7ba0c] text-black w-8 h-8 rounded-full flex items-center justify-center text-sm not-italic">1</span>
+                                FOTOĞRAF YÜKLE
+                            </h2>
+                            <label className="relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-white/20 rounded-3xl cursor-pointer hover:border-[#f7ba0c] transition-all bg-black/20 group">
+                                {selectedImage ? (
+                                    <img src={selectedImage} alt="Önizleme" className="h-full w-full object-contain p-4 transition-transform group-hover:scale-105" />
+                                ) : (
+                                    <div className="text-center">
+                                        <UploadIcon />
+                                        <p className="text-gray-400 mt-3 text-sm">Net bir portre fotoğrafı seçin</p>
+                                    </div>
+                                )}
+                                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            </label>
+                        </div>
 
-          {/* Sağ Panel: Çıktı */}
-          <div className="bg-black bg-opacity-20 p-6 rounded-2xl shadow-2xl flex flex-col items-center justify-center min-h-[500px] lg:min-h-0 border border-white/10">
-            <h2 className="text-2xl font-bold mb-4 self-start text-[#f7ba0c]">3. Sonuç</h2>
-            <div className="w-full h-full flex items-center justify-center">
-                {isLoading && <LoadingSpinner />}
-                {error && <p className="text-red-400 bg-red-900/50 p-4 rounded-lg text-center">{error}</p>}
-                {!isLoading && !error && generatedImage && (
-                    <div className="flex flex-col items-center gap-4 w-full">
-                        <img src={generatedImage} alt="Oluşturulan görsel" className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-2xl" />
+                        <div>
+                            <h2 className="text-2xl font-black mb-4 flex items-center gap-3 italic">
+                                <span className="bg-[#f7ba0c] text-black w-8 h-8 rounded-full flex items-center justify-center text-sm not-italic">2</span>
+                                STİL BELİRLE
+                            </h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {PROMPTS.map((p) => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => setSelectedPromptId(p.id)}
+                                        className={`text-[10px] sm:text-xs font-black uppercase py-4 px-2 rounded-xl border-2 transition-all ${
+                                            selectedPromptId === p.id 
+                                            ? 'bg-[#d61545] border-[#d61545] shadow-lg shadow-[#d61545]/40 scale-105' 
+                                            : 'bg-white/5 border-transparent hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {p.title}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <button
-                            onClick={handleDownload}
-                            title="Görseli İndir"
-                            className="mt-4 py-2 px-6 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 transition-all duration-300 flex items-center gap-2"
+                            onClick={handleGenerateImage}
+                            disabled={isLoading || !selectedImage || !selectedPromptId}
+                            className="w-full bg-[#d61545] hover:bg-[#b5123a] disabled:opacity-20 py-5 rounded-2xl text-xl font-black italic tracking-widest transition-all shadow-xl active:scale-95"
                         >
-                            <DownloadIcon/> İndir
+                            {isLoading ? 'TASARLANIYOR...' : 'FİGÜRÜMÜ OLUŞTUR'}
                         </button>
                     </div>
-                )}
-                {!isLoading && !error && !generatedImage && (
-                    <p className="text-gray-500 text-center">Oluşturulan görseliniz burada görünecek.</p>
-                )}
-            </div>
-          </div>
-        </main>
-        
-        <footer className="text-center mt-12 bg-black bg-opacity-20 p-6 rounded-2xl border border-white/10">
-            <h3 className="text-2xl font-bold text-[#f7ba0c]">Figürünüzü Gerçeğe Dönüştürün!</h3>
-            <p className="text-gray-300 mt-2 max-w-2xl mx-auto">Oluşturduğunuz bu harika tasarımı çok beğendiyseniz, uzman heykeltıraşlarımız tarafından özenle hazırlanacak fiziksel bir 3D figür olarak sipariş verebilirsiniz.</p>
-            <a 
-                href="https://3dfigur.com/kisiye-ozel-figurler" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-block mt-4 py-3 px-8 rounded-lg font-bold text-white bg-[#d61545] hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105"
-            >
-                Hemen Sipariş Ver
-            </a>
-            <p className="text-gray-500 text-sm mt-6">© 2025 3DFigur.com - Tüm hakları saklıdır.</p>
-        </footer>
 
-      </div>
-    </div>
-  );
+                    {/* Sonuç Paneli */}
+                    <div className="bg-black/40 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center min-h-[500px]">
+                        {isLoading ? (
+                            <LoadingSpinner />
+                        ) : error ? (
+                            <div className="text-center p-8 bg-red-500/10 rounded-3xl border border-red-500/20">
+                                <p className="text-red-400 font-bold">Bir Sorun Oluştu</p>
+                                <p className="text-sm text-gray-400 mt-2">{error}</p>
+                            </div>
+                        ) : generatedImage ? (
+                            <div className="w-full space-y-6 animate-in fade-in duration-700">
+                                <img src={generatedImage} alt="Sonuç" className="w-full rounded-3xl shadow-2xl border-4 border-white/5" />
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <button onClick={downloadImage} className="flex-1 bg-white/10 hover:bg-white/20 py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-white/10 transition-colors">
+                                        <DownloadIcon /> İNDİR
+                                    </button>
+                                    <a 
+                                        href="https://3dfigur.com/kisiye-ozel-figurler" 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="flex-[2] bg-[#f7ba0c] text-black hover:bg-[#ffc117] py-4 rounded-xl font-black italic text-center shadow-lg transition-transform hover:scale-105"
+                                    >
+                                        SİPARİŞ VER (3 GÜNDE KARGO)
+                                    </a>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center opacity-20">
+                                <div className="w-24 h-24 mx-auto border-4 border-dashed border-white/20 rounded-full flex items-center justify-center mb-4">
+                                    <span className="text-5xl">✨</span>
+                                </div>
+                                <p className="text-xl font-black italic">TASARIMINIZ BURADA GÖRÜNECEK</p>
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                {/* SEO Metin Alanı */}
+                <section className="mt-20 bg-black/20 p-8 sm:p-12 rounded-[3rem] border border-white/5">
+                    <h2 className="text-3xl font-black text-[#f7ba0c] mb-6 italic uppercase">Yapay Zeka Destekli 3D Figür Atölyesi</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-gray-400 leading-relaxed text-sm">
+                        <div className="space-y-4">
+                            <p>
+                                <strong className="text-white">3DFigur.com</strong> olarak, en sevdiğiniz anıları sadece ekranlarda değil, masanızda canlı bir şekilde tutmanız için geleceğin teknolojisini kullanıyoruz. Yapay zeka motorumuz, fotoğrafınızı saniyeler içinde analiz eder ve seçtiğiniz tarza (Funko, Pixar veya Chibi) en uygun tasarımı hazırlar.
+                            </p>
+                            <p>
+                                Oluşturduğunuz tasarım sadece bir görsel değil, profesyonel üretim ekibimiz için temel bir referanstır. Tasarımınızı beğendikten sonra saniyeler içinde sipariş verebilirsiniz.
+                            </p>
+                        </div>
+                        <div className="space-y-4">
+                            <p>
+                                <strong className="text-white">Neden Biz?</strong> Diğerlerinin aksine biz, yapay zekayı sadece bir eğlence aracı değil, bir üretim köprüsü olarak kullanıyoruz. Sipariş verdiğiniz her ürün, uzman ekibimiz tarafından titizlikle modellenir ve en yüksek kalitede 3D yazıcılarla üretilir.
+                            </p>
+                            <ul className="grid grid-cols-2 gap-2 text-[#f7ba0c] font-black italic uppercase text-[10px]">
+                                <li>✓ 3 İŞ GÜNÜNDE KARGO</li>
+                                <li>✓ ÜCRETSİZ DİJİTAL TASARIM</li>
+                                <li>✓ YÜKSEK DETAYLI BOYAMA</li>
+                                <li>✓ %100 MÜŞTERİ MEMNUNİYETİ</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <footer className="mt-12 text-center text-gray-600 text-[10px] font-bold uppercase tracking-widest">
+                    © 2025 3DFigur.com - Yapay Zeka Tasarım Atölyesi. Tüm hakları saklıdır.
+                </footer>
+            </div>
+        </div>
+    );
 }
