@@ -1,23 +1,70 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { 
-  Camera, 
-  Upload, 
-  Sparkles, 
-  ShoppingCart, 
-  Download, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle2, 
-  ChevronRight,
-  Info
-} from 'lucide-react';
 
 /**
  * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi
- * Akış:
- * 1. Gemini 2.5 Flash: Fotoğrafı analiz eder ve tasarımı planlar.
- * 2. Görsel Motoru: Planlanan tasarımı yüksek kalitede çizime dönüştürür.
+ * Hata Düzeltmesi: 'lucide-react' bağımlılığı kaldırılarak ikonlar dahili SVG olarak tanımlandı.
  */
+
+// --- İKON BİLEŞENLERİ (Bağımlılık gerektirmez) ---
+const CameraIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-gray-500 group-hover:text-[#f7ba0c] transition-colors">
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-500 mx-auto group-hover:text-[#f7ba0c] transition-colors">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+  </svg>
+);
+
+const SparklesIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M5 3h4"/>
+  </svg>
+);
+
+const ShoppingCartIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+  </svg>
+);
+
+const DownloadIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+);
+
+const RefreshCwIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+  </svg>
+);
+
+const AlertCircleIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+);
+
+const CheckCircle2Icon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+  </svg>
+);
+
+const ChevronRightIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m9 18 6-6-6-6"/>
+  </svg>
+);
+
+const InfoIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+  </svg>
+);
 
 const STYLES = [
   { id: 1, title: 'Chibi Stili', prompt: 'cute Chibi style, large head, small body, adorable facial features' },
@@ -37,14 +84,12 @@ export default function App() {
   const [step, setStep] = useState('idle'); // idle, analyzing, generating
 
   // --- GÜVENLİ API ANAHTARI YÖNETİMİ ---
-  // Bu blok, Vercel ortamında anahtarı okur, önizleme ortamında ise hata vermeden boş geçer.
   let apiKey = "";
   try {
     if (process.env.REACT_APP_GEMINI_API_KEY) {
       apiKey = process.env.REACT_APP_GEMINI_API_KEY;
     }
   } catch (e) {
-    // Önizleme ortamında 'process' tanımlı olmayabilir, bu hatayı yutuyoruz.
     console.log("Geliştirme ortamı: API Key manuel girilmelidir.");
   }
 
@@ -64,7 +109,6 @@ export default function App() {
 
   const selectedStyle = useMemo(() => STYLES.find(s => s.id === selectedStyleId), [selectedStyleId]);
 
-  // API Çağrıları için yardımcı fonksiyon
   const fetchWithRetry = async (url, options, retries = 5) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -197,13 +241,13 @@ export default function App() {
                   <div className="relative w-full h-full p-4">
                     <img src={selectedImage} alt="Önizleme" className="h-full w-full object-contain rounded-2xl shadow-2xl transition-transform group-hover:scale-105" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                        <RefreshCw className="w-12 h-12 text-white animate-spin-slow" />
+                        <RefreshCwIcon className="w-12 h-12 text-white animate-spin-slow" />
                     </div>
                   </div>
                 ) : (
                   <div className="text-center space-y-5">
                     <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                        <Camera className="w-10 h-10 text-gray-500 group-hover:text-[#f7ba0c] transition-colors" />
+                        <CameraIcon />
                     </div>
                     <div>
                         <p className="text-gray-300 font-bold text-lg tracking-tight uppercase">Görsel Seç</p>
@@ -231,9 +275,9 @@ export default function App() {
                         : 'bg-white/5 border-transparent hover:bg-white/10'
                     }`}
                   >
-                    <span className="relative z-10 tracking-widest">{style.title}</span>
+                    <span className="relative z-10 tracking-widest text-white">{style.title}</span>
                     {selectedStyleId === style.id && (
-                        <Sparkles className="absolute top-1 right-1 w-3 h-3 text-white/50 animate-pulse" />
+                        <SparklesIcon className="absolute top-1 right-1 w-3 h-3 text-white/50 animate-pulse" />
                     )}
                   </button>
                 ))}
@@ -243,18 +287,18 @@ export default function App() {
             <button
               onClick={handleGenerate}
               disabled={isLoading || !selectedImage || !selectedStyleId}
-              className="group w-full bg-[#d61545] hover:brightness-110 disabled:opacity-20 py-7 rounded-[2.5rem] text-2xl font-black italic tracking-widest transition-all shadow-2xl active:scale-95 overflow-hidden relative"
+              className="group w-full bg-[#d61545] hover:brightness-110 disabled:opacity-20 py-7 rounded-[2.5rem] text-2xl font-black italic tracking-widest transition-all shadow-2xl active:scale-95 overflow-hidden relative text-white"
             >
               <div className="relative z-10 flex items-center justify-center gap-3">
                 {isLoading ? (
                     <>
-                        <RefreshCw className="w-6 h-6 animate-spin" />
+                        <RefreshCwIcon className="w-6 h-6 animate-spin" />
                         <span>TASARLANIYOR...</span>
                     </>
                 ) : (
                     <>
                         <span>FİGÜRÜMÜ OLUŞTUR</span>
-                        <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                        <ChevronRightIcon className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                     </>
                 )}
               </div>
@@ -268,7 +312,7 @@ export default function App() {
               <div className="text-center space-y-10 animate-in fade-in zoom-in duration-500">
                 <div className="relative inline-block">
                   <div className="w-32 h-32 rounded-full border-t-4 border-b-4 border-[#f7ba0c] animate-spin"></div>
-                  <Sparkles className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  <SparklesIcon className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                 </div>
                 <div className="space-y-4">
                   <p className="text-3xl font-black italic text-[#f7ba0c] uppercase tracking-tighter">
@@ -279,7 +323,7 @@ export default function App() {
               </div>
             ) : error ? (
               <div className="text-center p-12 bg-red-500/10 rounded-[3rem] border border-red-500/20 max-w-md">
-                <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
+                <AlertCircleIcon className="w-20 h-20 text-red-500 mx-auto mb-6" />
                 <p className="text-2xl font-black uppercase italic tracking-tighter text-red-400">Tasarım Durduruldu</p>
                 <p className="text-sm text-gray-500 mt-4 leading-relaxed">{error}</p>
                 <button 
@@ -295,7 +339,7 @@ export default function App() {
                   <img src={generatedImage} alt="Yapay Zeka Tasarımı" className="w-full h-auto transform transition-transform duration-700 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-12">
                     <div className="text-center">
-                        <CheckCircle2 className="w-12 h-12 text-[#f7ba0c] mx-auto mb-2 animate-bounce" />
+                        <CheckCircle2Icon className="w-12 h-12 text-[#f7ba0c] mx-auto mb-2 animate-bounce" />
                         <p className="text-[#f7ba0c] font-black italic tracking-widest uppercase text-3xl">TASARIM HAZIR!</p>
                     </div>
                   </div>
@@ -305,7 +349,7 @@ export default function App() {
                     onClick={downloadImage} 
                     className="flex-1 bg-white/5 hover:bg-white/10 py-6 rounded-2xl font-black italic flex items-center justify-center gap-3 border border-white/10 transition-all uppercase tracking-tight text-white"
                   >
-                    <Download className="w-6 h-6" /> İNDİR
+                    <DownloadIcon className="w-6 h-6" /> İNDİR
                   </button>
                   <a 
                     href="https://3dfigur.com/kisiye-ozel-figurler" 
@@ -313,14 +357,14 @@ export default function App() {
                     rel="noreferrer" 
                     className="flex-[2] bg-gradient-to-r from-[#f7ba0c] to-[#ff9d00] text-black hover:brightness-110 py-6 rounded-2xl font-black italic text-center shadow-2xl transition-all hover:scale-[1.03] flex items-center justify-center gap-4 uppercase tracking-tight"
                   >
-                    <ShoppingCart className="w-6 h-6" /> SİPARİŞ VER (3-5 İŞ GÜNÜ)
+                    <ShoppingCartIcon className="w-6 h-6" /> SİPARİŞ VER (3-5 İŞ GÜNÜ)
                   </a>
                 </div>
               </div>
             ) : (
               <div className="text-center opacity-20 select-none space-y-10 group">
                 <div className="w-40 h-40 mx-auto border-4 border-dashed border-white/20 rounded-full flex items-center justify-center transition-all duration-700 group-hover:border-[#f7ba0c]/50 group-hover:rotate-45">
-                  <Sparkles className="w-20 h-20 group-hover:scale-110 transition-transform duration-700 text-white" />
+                  <SparklesIcon className="w-20 h-20 group-hover:scale-110 transition-transform duration-700 text-white" />
                 </div>
                 <div>
                   <p className="text-3xl font-black italic uppercase tracking-wider text-white">HAYALİN BURADA DOĞACAK</p>
@@ -338,17 +382,17 @@ export default function App() {
                     { 
                         title: "Yapay Zeka Sanatı", 
                         text: "Gelişmiş görüntü işleme algoritmaları ile fotoğrafınızı analiz ederek size özel bir tasarım taslağı hazırlıyoruz.", 
-                        icon: Sparkles 
+                        icon: SparklesIcon 
                     },
                     { 
                         title: "Hızlı Üretim", 
                         text: "Tasarımınız onaylandıktan sonra sadece 3-5 iş günü içerisinde üretilip, titizlikle paketlenerek kargoya verilir.", 
-                        icon: ShoppingCart 
+                        icon: ShoppingCartIcon 
                     },
                     { 
                         title: "Premium Kalite", 
                         text: "Her figür, darbelere dayanıklı premium reçinelerden üretilir ve tamamen yenilikçi teknolojiler ile kusursuz bir şekilde üretilir.", 
-                        icon: CheckCircle2 
+                        icon: CheckCircle2Icon 
                     }
                 ].map((item, i) => (
                     <div key={i} className="bg-white/5 p-12 rounded-[3.5rem] border border-white/5 space-y-6 hover:bg-white/10 transition-all duration-500 hover:-translate-y-2 group">
@@ -363,7 +407,7 @@ export default function App() {
 
             <div className="bg-white/5 p-12 sm:p-20 rounded-[4rem] border border-white/5 space-y-10">
                 <div className="flex items-center gap-6 text-[#f7ba0c]">
-                    <Info className="w-10 h-10" />
+                    <InfoIcon className="w-10 h-10" />
                     <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">Fotoğraflarınızı Hayata Geçirin</h2>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-gray-400 text-lg leading-relaxed italic">
