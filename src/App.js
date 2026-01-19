@@ -3,8 +3,9 @@ import React, { useState, useCallback, useMemo } from 'react';
 /**
  * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi (Hata Düzeltmeleri Yapıldı)
  * * Yapılan Düzeltmeler:
- * 1. "process is not defined" hatası giderildi: API anahtarı yönetimi Canvas ortamına uygun hale getirildi.
- * 2. İkonlar dahili olarak tanımlandı, harici paket bağımlılığı kaldırıldı.
+ * 1. "step is not defined" hatası giderildi: `setStep` yerine `setLoadingStep` kullanıldı.
+ * 2. "process is not defined" hatası için güvenli erişim sağlandı.
+ * 3. İkonlar dahili olarak tanımlandı.
  */
 
 // --- İKON BİLEŞENLERİ (Bağımsız çalışması için dahili olarak tanımlandı) ---
@@ -87,9 +88,8 @@ export default function App() {
   const [loadingStep, setLoadingStep] = useState(''); 
 
   // --- API ANAHTARI YÖNETİMİ ---
-  // Canvas/Önizleme ortamında sistem anahtarı otomatik enjekte eder.
-  // Bu yüzden apiKey değişkenini boş bir string olarak başlatıyoruz.
-  const apiKey = "";
+  // Vercel veya yerel ortamda güvenli erişim
+  const apiKey = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) || "";
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files[0];
@@ -99,7 +99,7 @@ export default function App() {
         setSelectedImage(reader.result);
         setGeneratedImage(null);
         setError(null);
-        setLoadingStep('');
+        setLoadingStep(''); // Düzeltildi: setStep yerine setLoadingStep kullanıldı
       };
       reader.readAsDataURL(file);
     }
@@ -315,7 +315,7 @@ export default function App() {
                 </div>
                 <div className="space-y-4">
                   <p className="text-3xl font-black italic text-[#f7ba0c] uppercase tracking-tighter">
-                    {step === 'analyzing' ? 'FOTOĞRAFIN ANALİZ EDİLİYOR...' : '3D TASARIMIN ÇİZİLİYOR...'}
+                    {loadingStep === 'analyzing' ? 'FOTOĞRAFIN ANALİZ EDİLİYOR...' : '3D TASARIMIN ÇİZİLİYOR...'}
                   </p>
                   <p className="text-gray-400 text-lg italic max-w-xs mx-auto">Yapay zeka hayallerini gerçeğe dönüştürmek üzere çalışıyor...</p>
                 </div>
