@@ -5,7 +5,8 @@ import React, { useState, useCallback, useMemo } from 'react';
  * * Yapılan Düzeltmeler:
  * 1. "step is not defined" hatası giderildi: `setStep` yerine `setLoadingStep` kullanıldı.
  * 2. "process is not defined" hatası için güvenli erişim sağlandı.
- * 3. İkonlar dahili olarak tanımlandı.
+ * 3. API Anahtarı kontrolü eklendi: Anahtar yoksa kullanıcı uyarılıyor.
+ * 4. İkonlar dahili olarak tanımlandı.
  */
 
 // --- İKON BİLEŞENLERİ (Bağımsız çalışması için dahili olarak tanımlandı) ---
@@ -99,7 +100,7 @@ export default function App() {
         setSelectedImage(reader.result);
         setGeneratedImage(null);
         setError(null);
-        setLoadingStep(''); // Düzeltildi: setStep yerine setLoadingStep kullanıldı
+        setLoadingStep('');
       };
       reader.readAsDataURL(file);
     }
@@ -130,6 +131,13 @@ export default function App() {
   const handleGenerate = async () => {
     if (!selectedImage || !selectedStyleId) {
       setError("Lütfen bir fotoğraf yükleyin ve tasarım stilinizi seçin.");
+      return;
+    }
+
+    // --- API ANAHTARI KONTROLÜ ---
+    // Eğer anahtar yoksa işlem başlatılmadan kullanıcıya bilgi verilir.
+    if (!apiKey) {
+      setError("Sistem Hatası: API Anahtarı bulunamadı. Lütfen Vercel ayarlarında 'REACT_APP_GEMINI_API_KEY' tanımlandığından emin olun.");
       return;
     }
 
