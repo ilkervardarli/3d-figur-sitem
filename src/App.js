@@ -1,15 +1,14 @@
 import React, { useState, useCallback, useMemo } from 'react';
 
 /**
- * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi (Hata Düzeltmeleri Yapıldı)
- * * Yapılan Düzeltmeler:
- * 1. "process is not defined" ve "Objects are not valid as a React child" hataları giderildi.
- * 2. API anahtarı yönetimi Canvas ortamı ve Vercel için uyumlu hale getirildi.
- * 3. Hata sınırları (Error Boundary) ile ilgili potansiyel sorunlar ele alındı.
- * 4. İkonlar dahili olarak tanımlandı.
+ * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi
+ * Hata Düzeltmeleri:
+ * 1. API Anahtarı: Canvas ortamında otomatik enjekte edilmesi için boş string ("") olarak ayarlandı.
+ * 2. Hata Yönetimi: Hata mesajlarının string formatında olması garanti altına alındı.
+ * 3. Pixar Stili: Özel ve detaylı prompt entegrasyonu sağlandı.
  */
 
-// --- İKON BİLEŞENLERİ (Bağımsız çalışması için dahili olarak tanımlandı) ---
+// --- İKON BİLEŞENLERİ (Bağımlılık gerektirmez) ---
 const CameraIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-gray-500 group-hover:text-[#f7ba0c] transition-colors">
     <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>
@@ -72,12 +71,16 @@ const InfoIcon = ({ className }) => (
 
 // --- STİL TANIMLARI ---
 const STYLES = [
-  { id: 1, title: 'Chibi Stili', promptPart: 'cute Chibi style with a large head, small body, and adorable features' },
-  { id: 2, title: 'Funko Stili', promptPart: 'iconic Funko Pop vinyl figure with large black eyes and oversized head' },
-  { id: 3, title: 'Pixar Stili', promptPart: 'Turn the uploaded photo into a 3D animated cartoon character portrait, preserving the exact gestures, expressions, and facial features. Maintain original skin tone, eyes, and overall look. High quality Pixar-style animation render.' },
-  { id: 4, title: 'Action Figür', promptPart: 'modern action figure style with articulated joints and professional toy finish' },
-  { id: 5, title: 'Roma Büstü', promptPart: 'classic Roman marble bust sculpture with realistic stone texture' },
-  { id: 6, title: 'Anime Stili', promptPart: 'high-quality 3D anime style character with vibrant colors' }
+  { id: 1, title: 'Chibi Stili', promptPart: 'cute Chibi style, full-body character visible from head to toe, large head, small body, adorable facial features' },
+  { id: 2, title: 'Funko Stili', promptPart: 'iconic Funko Pop vinyl figure, full-body character visible from head to toe, large black circular eyes, oversized head' },
+  { 
+    id: 3, 
+    title: 'Pixar Stili', 
+    promptPart: 'Turn the uploaded photo into a 3D animated cartoon character portrait, preserving the exact gestures, expressions, and facial features. Maintain original skin tone, eyes, and overall look. Exaggerate proportions for a stylized look but keep expressions faithful. High quality Pixar-style animation render, full-body visible from head to toe.' 
+  },
+  { id: 4, title: 'Action Figür', promptPart: 'modern action figure style, full-body character visible from head to toe, articulated joints, professional toy plastic texture' },
+  { id: 5, title: 'Roma Heykeli', promptPart: 'classical Roman marble statue, full-body sculpture visible from head to toe, realistic stone texture, white marble' },
+  { id: 6, title: 'Anime Stili', promptPart: 'high-quality 3D anime style character, full-body visible from head to toe, vibrant colors, stylized features' }
 ];
 
 export default function App() {
@@ -88,10 +91,9 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loadingStep, setLoadingStep] = useState(''); 
 
-  // --- API ANAHTARI YÖNETİMİ ---
-  // Canvas ortamı veya Vercel için güvenli anahtar yönetimi.
-  // process.env kontrolü ile tarayıcıda hata oluşmasını engelliyoruz.
-  const apiKey = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) || "";
+  // API Anahtarı: Çalışma ortamı tarafından sağlanır.
+  // "process" hatasını önlemek için burada boş string bırakıyoruz.
+  const apiKey = ""; 
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files[0];
@@ -135,13 +137,6 @@ export default function App() {
       return;
     }
 
-    // --- API ANAHTARI KONTROLÜ ---
-    // Eğer anahtar yoksa işlem başlatılmadan kullanıcıya bilgi verilir.
-    if (!apiKey) {
-      setError("Sistem Hatası: API Anahtarı bulunamadı. Lütfen Vercel ayarlarında 'REACT_APP_GEMINI_API_KEY' tanımlandığından emin olun.");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     setLoadingStep('analyzing');
@@ -149,14 +144,16 @@ export default function App() {
     try {
       const base64Data = selectedImage.split(',')[1];
 
-      // AŞAMA 1: Fotoğraf Analizi
+      // AŞAMA 1: Fotoğraf Analizi (Gemini 2.5 Flash)
       const analyzerUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       
       let promptText = "";
+      
+      // Pixar stili için özel mantık
       if (selectedStyleId === 3) {
-          promptText = `Analyze the person in this photo. ${selectedStyle.promptPart}. Ensure the final output is a FULL-BODY 3D character visible from head to toe. Return ONLY the final prompt text.`;
+          promptText = `Analyze the person in this photo carefully. ${selectedStyle.promptPart} Ensure the final prompt describes a FULL-BODY character including shoes. Return ONLY the final prompt text to be used in an image generator.`;
       } else {
-          promptText = `Analyze the person in this photo. Create a detailed prompt to generate a FULL-BODY 3D figure in ${selectedStyle.promptPart} that looks like them. Ensure head-to-toe visibility. Solid white background, 3D render, high detail. Return ONLY the prompt text.`;
+          promptText = `Analyze the person in this photo. Create a detailed prompt to generate a FULL-BODY 3D figure in ${selectedStyle.promptPart} that looks like them. Ensure head-to-toe visibility. Solid white background, 3D render, high detail. Return ONLY the final prompt text.`;
       }
 
       const analyzerPayload = {
@@ -179,7 +176,7 @@ export default function App() {
 
       setLoadingStep('generating');
 
-      // AŞAMA 2: Görsel Üretimi
+      // AŞAMA 2: Görsel Üretimi (Imagen 4.0)
       const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
       const imagenPayload = {
         instances: { prompt: optimizedPrompt },
@@ -201,8 +198,9 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      // Hata nesnesini string'e çevirerek render hatasını önlüyoruz.
-      setError(`İşlem sırasında bir hata oluştu: ${err instanceof Error ? err.message : String(err)}`);
+      // Hata nesnesini string'e çevirerek render hatasını önlüyoruz
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`İşlem sırasında bir hata oluştu: ${errorMessage}`);
     } finally {
       setIsLoading(false);
       setLoadingStep('');
@@ -334,7 +332,7 @@ export default function App() {
               <div className="text-center p-12 bg-red-500/10 rounded-[3rem] border border-red-500/20 max-w-md">
                 <AlertCircleIcon className="w-20 h-20 text-red-500 mx-auto mb-6" />
                 <p className="text-2xl font-black uppercase italic tracking-tighter text-red-400">Tasarım Durduruldu</p>
-                <p className="text-sm text-gray-500 mt-4 leading-relaxed">{error}</p>
+                <p className="text-sm text-gray-500 mt-4 leading-relaxed">{typeof error === 'string' ? error : 'Bilinmeyen bir hata oluştu.'}</p>
                 <button 
                   onClick={() => setError(null)} 
                   className="mt-8 px-10 py-4 bg-white/5 hover:bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
