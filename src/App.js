@@ -1,75 +1,412 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import { 
+  Camera, 
+  Upload, 
+  Sparkles, 
+  ShoppingCart, 
+  Download, 
+  RefreshCw, 
+  AlertCircle, 
+  CheckCircle2, 
+  ChevronRight,
+  Info,
+  Package,
+  Layers
+} from 'lucide-react';
+
 /**
- * Gemini API Integration Utility
- * This script demonstrates how to interact with the Gemini 2.5 Flash model
- * using standard fetch requests with built-in exponential backoff logic.
+ * 3D FIGUR AI - Profesyonel Kullanıcı Deneyimi
+ * Akış:
+ * 1. Gemini 2.5 Flash: Fotoğrafı analiz eder ve tasarımı planlar.
+ * 2. Görsel Motoru: Planlanan tasarımı yüksek kalitede çizime dönüştürür.
  */
 
-const apiKey = ""; // The environment provides the key at runtime
-const model = "gemini-2.5-flash-preview-09-2025";
+const STYLES = [
+  { id: 1, title: 'Chibi Stili', prompt: 'cute Chibi style, full-body character visible from head to toe, large head, small body, adorable facial features' },
+  { id: 2, title: 'Funko Stili', prompt: 'iconic Funko Pop vinyl figure, full-body character visible from head to toe, large black circular eyes, oversized head' },
+  { 
+    id: 3, 
+    title: 'Pixar Stili', 
+    prompt: 'Turn the uploaded photo into a 3D animated cartoon character portrait, preserving the exact gestures, expressions, and facial features of the reference photo. Maintain the original skin tone, eyebrows, lips, nose shape, facial hair, and overall bone structure, ensuring the mouth, eyes, and expression match the reference accurately. Exaggerate the proportions to achieve a stylized animated cartoon look, while keeping the facial expression and gestures identical to the original photo—whether it’s a smile, a surprised expression, or any other emotion. The character’s eyes should be large and expressive, consistent with an exaggerated cartoon style, while maintaining the overall facial expression faithful to the reference. Skin texture should be realistic, with visible pores and facial hair where applicable. Include accessories such as earrings, necklaces, or scarves that match the reference image. Use clean, cinematic lighting with a key light from the left, a fill light from the right, and a rim light to create depth. Keep the background simple or softly gradient to maintain focus on the character. The rendering style should combine Pixar-level detail with playful cartoon proportions, high-resolution lighting, and a smooth clay-like finish.' 
+  },
+  { id: 4, title: 'Action Figür', prompt: 'Hasbro style action figure, full-body character visible from head to toe, articulated joints, professional toy plastic texture' },
+  { id: 5, title: 'Roma Heykeli', prompt: 'classical Roman marble statue, full-body sculpture visible from head to toe, realistic stone texture, white marble' },
+  { id: 6, title: 'Anime Stili', prompt: 'high-quality 3D anime character design, full-body visible from head to toe, vibrant colors, stylized features' }
+];
 
-/**
- * Implements exponential backoff for API calls.
- * @param {Function} fn - The async function to retry.
- * @param {number} retries - Max number of retries.
- */
-async function fetchWithRetry(fn, retries = 5) {
-  for (let i = 0; i < retries; i++) {
+export default function App() {
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedStyleId, setSelectedStyleId] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [step, setStep] = useState('idle'); // idle, analyzing, generating
+
+  // API Anahtarı: Vercel üzerinde Environment Variables (REACT_APP_GEMINI_API_KEY) olarak tanımlanmalıdır.
+  const apiKey = ""; 
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result);
+        setGeneratedImage(null);
+        setError(null);
+        setStep('idle');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const selectedStyle = useMemo(() => STYLES.find(s => s.id === selectedStyleId), [selectedStyleId]);
+
+  // API Çağrıları için yardımcı fonksiyon
+  const fetchWithRetry = async (url, options, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (response.ok) return await response.json();
+        
+        if (response.status === 429 || response.status >= 500) {
+          const delay = Math.pow(2, i) * 1000;
+          await new Promise(res => setTimeout(res, delay));
+          continue;
+        }
+        
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Hata: ${response.status}`);
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000));
+      }
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedImage || !selectedStyleId) {
+      setError("Lütfen bir fotoğraf yükleyin ve bir stil seçin.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setStep('analyzing');
+
     try {
-      return await fn();
+      const base64Data = selectedImage.split(',')[1];
+
+      // 1. ADIM: Fotoğraf Analizi (Gemini 2.5 Flash)
+      const analyzerUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      
+      // Pixar stili için özel prompt yapısı, diğerleri için genel yapı
+      let promptText = "";
+      if (selectedStyleId === 3) { // Pixar Stili ID'si
+          promptText = `Analyze the person in this photo. ${selectedStyle.prompt}. Ensure the final output is a FULL-BODY 3D character visible from head to toe. Return ONLY the final prompt text.`;
+      } else {
+          promptText = `Analyze the person in this photo. Based on their look, hair, skin, and clothes, write a detailed professional prompt to generate a FULL-BODY 3D figure in ${selectedStyle.prompt} that looks exactly like them. Ensure the character is visible from head to toe (shoes included). Solid white background, high-end 3D render. Return ONLY the final prompt text.`;
+      }
+
+      const analyzerPayload = {
+        contents: [{
+          parts: [
+            { text: promptText },
+            { inlineData: { mimeType: "image/png", data: base64Data } }
+          ]
+        }]
+      };
+
+      const analyzerResult = await fetchWithRetry(analyzerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(analyzerPayload)
+      });
+
+      const optimizedPrompt = analyzerResult.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!optimizedPrompt) throw new Error("Görsel analizi yapılamadı.");
+
+      setStep('generating');
+
+      // 2. ADIM: Görsel Üretimi (Yapay Zeka Motoru)
+      const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+      const imagenPayload = {
+        instances: { prompt: optimizedPrompt },
+        parameters: { sampleCount: 1 }
+      };
+
+      const imagenResult = await fetchWithRetry(imagenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(imagenPayload)
+      });
+
+      const resultImage = imagenResult.predictions?.[0]?.bytesBase64Encoded;
+
+      if (resultImage) {
+        setGeneratedImage(`data:image/png;base64,${resultImage}`);
+        setStep('done');
+      } else {
+        throw new Error("Tasarım oluşturulamadı. Lütfen tekrar deneyin.");
+      }
     } catch (err) {
-      if (i === retries - 1) throw err;
-      const delay = Math.pow(2, i) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
+      console.error(err);
+      setError(err.message);
+      setStep('idle');
+    } finally {
+      setIsLoading(false);
     }
-  }
-}
-
-/**
- * Generates content using the Gemini API.
- * @param {string} prompt - The user prompt.
- */
-async function generateGeminiContent(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  
-  const payload = {
-    contents: [{
-      parts: [{ text: prompt }]
-    }]
   };
 
-  const executeCall = async () => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`API Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    return await response.json();
+  const downloadImage = () => {
+    if (!generatedImage) return;
+    const link = document.createElement("a");
+    link.href = generatedImage;
+    link.download = "3d-figur-tasarimi.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  try {
-    const result = await fetchWithRetry(executeCall);
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text || "No content generated.";
-  } catch (error) {
-    console.error("Final attempt failed:", error.message);
-    return `Error: ${error.message}`;
-  }
-}
+  return (
+    // Ana Arka Plan Rengi: #31006e
+    <div className="min-h-screen bg-[#31006e] text-white font-sans selection:bg-[#f7ba0c] selection:text-black">
+      {/* Kargo Şeridi - Arka Plan: #f7ba0c, Yazı: Siyah */}
+      <div className="bg-[#f7ba0c] text-black py-3 px-4 text-center font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs shadow-xl relative z-50">
+        🚀 KAMPANYA: SİPARİŞLERİNİZ 3-5 İŞ GÜNÜ İÇİNDE ÜRETİLİP KARGOYA VERİLİR!
+      </div>
 
-// Example execution
-async function main() {
-  console.log("Initializing Gemini request...");
-  const prompt = "Explain the concept of 'corrupted shared libraries' in Linux systems and how to resolve them.";
-  
-  const response = await generateGeminiContent(prompt);
-  console.log("\n--- AI Response ---\n");
-  console.log(response);
-}
+      <div className="container mx-auto max-w-6xl px-4 py-12 lg:py-20">
+        <header className="text-center mb-16 lg:mb-24 animate-in fade-in slide-in-from-top duration-1000">
+          <h1 className="text-6xl sm:text-8xl lg:text-9xl font-black italic tracking-tighter uppercase leading-none inline-block">
+            3D FİGÜR <span className="text-[#f7ba0c] drop-shadow-[0_10px_30px_rgba(247,186,12,0.3)]">AI</span>
+          </h1>
+          <p className="mt-8 text-gray-300 text-lg sm:text-2xl font-medium italic max-w-3xl mx-auto leading-relaxed">
+            Yapay zeka ile fotoğraflarınızı kalıcı birer anıya dönüştürün. Saniyeler içinde kendi koleksiyon figürünüzü tasarlayın.
+          </p>
+        </header>
 
-main();
+        <main className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          {/* Giriş Paneli */}
+          <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3.5rem] p-8 sm:p-12 shadow-[0_30px_100px_rgba(0,0,0,0.5)] space-y-12">
+            <section className="space-y-6">
+              <div className="flex items-center gap-5">
+                {/* Adım Numarası Arka Planı: #f7ba0c */}
+                <div className="w-12 h-12 rounded-2xl bg-[#f7ba0c] text-black flex items-center justify-center font-black italic shadow-lg">1</div>
+                <h2 className="text-3xl font-black italic uppercase tracking-tight text-white">Fotoğraf Yükle</h2>
+              </div>
+              
+              <label className="group relative flex flex-col items-center justify-center h-80 border-2 border-dashed border-white/20 rounded-[2.5rem] cursor-pointer hover:border-[#f7ba0c] hover:bg-white/5 transition-all overflow-hidden bg-black/40">
+                {selectedImage ? (
+                  <div className="relative w-full h-full p-4">
+                    <img src={selectedImage} alt="Önizleme" className="h-full w-full object-contain rounded-2xl shadow-2xl transition-transform group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                        <RefreshCw className="w-12 h-12 text-white animate-spin-slow" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-5">
+                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                        <Camera className="w-10 h-10 text-gray-400 group-hover:text-[#f7ba0c] transition-colors" />
+                    </div>
+                    <div>
+                        <p className="text-gray-300 font-bold text-lg tracking-tight uppercase">Görsel Seç</p>
+                        <p className="text-gray-500 text-sm mt-1">Yüzünüzün net olduğu bir fotoğraf</p>
+                    </div>
+                  </div>
+                )}
+                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+              </label>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-[#f7ba0c] text-black flex items-center justify-center font-black italic shadow-lg">2</div>
+                <h2 className="text-3xl font-black italic uppercase tracking-tight text-white">Stilini Seç</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {STYLES.map((style) => (
+                  <button
+                    key={style.id}
+                    onClick={() => setSelectedStyleId(style.id)}
+                    className={`text-[10px] font-black uppercase py-5 px-3 rounded-2xl border-2 transition-all duration-500 relative overflow-hidden group/btn ${
+                      selectedStyleId === style.id 
+                        ? 'bg-[#d61545] border-[#d61545] shadow-2xl shadow-[#d61545]/40 scale-105' 
+                        : 'bg-white/5 border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    <span className="relative z-10 tracking-widest text-white">{style.title}</span>
+                    {selectedStyleId === style.id && (
+                        <Sparkles className="absolute top-1 right-1 w-3 h-3 text-white/50 animate-pulse" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Aksiyon Butonu: #d61545 */}
+            <button
+              onClick={handleGenerate}
+              disabled={isLoading || !selectedImage || !selectedStyleId}
+              className="group w-full bg-[#d61545] hover:brightness-110 disabled:opacity-20 py-7 rounded-[2.5rem] text-2xl font-black italic tracking-widest transition-all shadow-2xl active:scale-95 overflow-hidden relative text-white"
+            >
+              <div className="relative z-10 flex items-center justify-center gap-3">
+                {isLoading ? (
+                    <>
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                        <span>TASARLANIYOR...</span>
+                    </>
+                ) : (
+                    <>
+                        <span>FİGÜRÜMÜ OLUŞTUR</span>
+                        <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                    </>
+                )}
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
+            </button>
+          </div>
+
+          {/* Çıktı Paneli */}
+          <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3.5rem] p-8 sm:p-12 min-h-[600px] flex flex-col items-center justify-center shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative overflow-hidden">
+            {isLoading ? (
+              <div className="text-center space-y-10 animate-in fade-in zoom-in duration-500">
+                <div className="relative inline-block">
+                  <div className="w-32 h-32 rounded-full border-t-4 border-b-4 border-[#f7ba0c] animate-spin"></div>
+                  <Sparkles className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                </div>
+                <div className="space-y-4">
+                  <p className="text-3xl font-black italic text-[#f7ba0c] uppercase tracking-tighter">
+                    {step === 'analyzing' ? 'FOTOĞRAFIN ANALİZ EDİLİYOR...' : '3D TASARIMIN ÇİZİLİYOR...'}
+                  </p>
+                  <p className="text-gray-400 text-lg italic max-w-xs mx-auto">Yapay zeka hayallerini gerçeğe dönüştürmek üzere çalışıyor...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="text-center p-12 bg-red-500/10 rounded-[3rem] border border-red-500/20 max-w-md">
+                <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
+                <p className="text-2xl font-black uppercase italic tracking-tighter text-red-400">Tasarım Durduruldu</p>
+                <p className="text-sm text-gray-500 mt-4 leading-relaxed">{error}</p>
+                <button 
+                  onClick={() => setError(null)} 
+                  className="mt-8 px-10 py-4 bg-white/5 hover:bg-white/10 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all border border-white/10"
+                >
+                  YENİDEN DENE
+                </button>
+              </div>
+            ) : generatedImage ? (
+              <div className="w-full space-y-10 animate-in fade-in zoom-in duration-1000">
+                <div className="relative group overflow-hidden rounded-[3rem] border-8 border-white/5 shadow-2xl bg-white/5">
+                  <img src={generatedImage} alt="Yapay Zeka Tasarımı" className="w-full h-auto transform transition-transform duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-12">
+                    <div className="text-center">
+                        <CheckCircle2 className="w-12 h-12 text-[#f7ba0c] mx-auto mb-2 animate-bounce" />
+                        <p className="text-[#f7ba0c] font-black italic tracking-widest uppercase text-3xl">TASARIM HAZIR!</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-5">
+                  <button 
+                    onClick={downloadImage} 
+                    className="flex-1 bg-white/5 hover:bg-white/10 py-6 rounded-2xl font-black italic flex items-center justify-center gap-3 border border-white/10 transition-all uppercase tracking-tight text-white"
+                  >
+                    <Download className="w-6 h-6" /> İNDİR
+                  </button>
+                  <a 
+                    href="https://3dfigur.com/kisiye-ozel-figurler" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="flex-[2] bg-gradient-to-r from-[#f7ba0c] to-[#ff9d00] text-black hover:brightness-110 py-6 rounded-2xl font-black italic text-center shadow-2xl transition-all hover:scale-[1.03] flex items-center justify-center gap-4 uppercase tracking-tight"
+                  >
+                    <ShoppingCart className="w-6 h-6" /> SİPARİŞ VER (3-5 İŞ GÜNÜ)
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center opacity-20 select-none space-y-10 group">
+                <div className="w-40 h-40 mx-auto border-4 border-dashed border-white/20 rounded-full flex items-center justify-center transition-all duration-700 group-hover:border-[#f7ba0c]/50 group-hover:rotate-45">
+                  <Sparkles className="w-20 h-20 group-hover:scale-110 transition-transform duration-700 text-white" />
+                </div>
+                <div>
+                  <p className="text-3xl font-black italic uppercase tracking-wider text-white">HAYALİN BURADA DOĞACAK</p>
+                  <p className="text-gray-500 mt-3 text-lg italic">Adımları tamamlayarak yapay zekayı uyandır!</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Bilgi Kartları & SEO Metni */}
+        <section className="mt-40 space-y-20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                {[
+                    { 
+                        title: "Yapay Zeka Sanatı", 
+                        text: "Gelişmiş görüntü işleme algoritmaları ile fotoğrafınızı analiz ederek size özel bir tasarım taslağı hazırlıyoruz.", 
+                        icon: Sparkles 
+                    },
+                    { 
+                        title: "Hızlı Üretim", 
+                        text: "Tasarımınız onaylandıktan sonra sadece 3-5 iş günü içerisinde üretilip, titizlikle paketlenerek kargoya verilir.", 
+                        icon: ShoppingCart 
+                    },
+                    { 
+                        title: "Premium Kalite", 
+                        text: "Her figür, darbelere dayanıklı premium reçinelerden üretilir ve tamamen yenilikçi teknolojiler ile kusursuz bir şekilde üretilir.", 
+                        icon: CheckCircle2 
+                    }
+                ].map((item, i) => (
+                    <div key={i} className="bg-white/5 p-12 rounded-[3.5rem] border border-white/5 space-y-6 hover:bg-white/10 transition-all duration-500 hover:-translate-y-2 group">
+                        <div className="w-16 h-16 rounded-2xl bg-[#f7ba0c]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <item.icon className="w-8 h-8 text-[#f7ba0c]" />
+                        </div>
+                        <h3 className="text-white font-black italic uppercase tracking-widest text-xl">{item.title}</h3>
+                        <p className="text-gray-400 text-base leading-relaxed">{item.text}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="bg-white/5 p-12 sm:p-20 rounded-[4rem] border border-white/5 space-y-10">
+                <div className="flex items-center gap-6 text-[#f7ba0c]">
+                    <Info className="w-10 h-10" />
+                    <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">Fotoğraflarınızı Hayata Geçirin</h2>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 text-gray-400 text-lg leading-relaxed italic">
+                    <p>
+                        Sıradan fotoğraflarınızı unutun! 3DFigur.com'un devrim niteliğindeki yapay zeka aracı ile artık en sevdiğiniz anıları, elle tutulur hatıralara dönüştürebilirsiniz. Gelişmiş teknolojimiz, yüklediğiniz bir fotoğrafı analiz ederek saniyeler içinde size özel, yüksek kaliteli bir tasarım sunar. Kendiniz, sevdikleriniz veya evcil hayvanınız için eşi benzeri olmayan, tamamen kişiye özel bir biblo veya heykel yaratmak hiç bu kadar kolay olmamıştı.
+                    </p>
+                    <p>
+                        Dijital tasarımınızı beğendiğinizde, uzman heykeltıraşlarımız ve 3D modelleme sanatçılarımız süreci devralır. En kaliteli malzemeler kullanılarak size özel üretim yapılır ve sadece 3-5 iş günü içerisinde özenle paketlenerek kargoya verilir. Her ürün, darbelere dayanıklı premium reçineden üretilir ve tamamen yenilikçi teknolojiler ile hayat bulur.
+                    </p>
+                </div>
+                <div className="pt-10 border-t border-white/10">
+                    <ul className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-[#f7ba0c] font-black italic uppercase text-xs tracking-widest">
+                        <li>✓ 3-5 GÜNDE KARGO</li>
+                        <li>✓ YENİLİKÇİ TEKNOLOJİ</li>
+                        <li>✓ ÜCRETSİZ TASARIM</li>
+                        <li>✓ %100 MEMNUNİYET</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer className="mt-40 pt-16 border-t border-white/5 text-center text-gray-600 text-[10px] font-bold uppercase tracking-[0.4em] space-y-8">
+          <p>© 2026 3DFigur.com - YAPAY ZEKA TASARIM VE ÜRETİM ATÖLYESİ</p>
+          <div className="flex justify-center gap-10 opacity-40">
+            <span className="hover:text-white transition-colors cursor-pointer tracking-widest">KVKK</span>
+            <span className="hover:text-white transition-colors cursor-pointer tracking-widest">SÖZLEŞMELER</span>
+            <span className="hover:text-white transition-colors cursor-pointer tracking-widest">İLETİŞİM</span>
+          </div>
+        </footer>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
+      `}} />
+    </div>
+  );
+}
